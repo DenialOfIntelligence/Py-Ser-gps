@@ -3,36 +3,33 @@ import pynmea2
 import serial
 import io
 
-ser = serial.Serial('/dev/ttyACM0', 9600, timeout=5.0)
+ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=5.0)
 sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
 last_time=00
-
-
-def check_last_update(time,last_time):
-    if time==last_time:
-        return False
-    else:
-        return True
 
 while 1:
     try:
         line = sio.readline()
         msg = pynmea2.parse(line)
+        latitude=msg.latitude
+        longitude=msg.longitude
+        time=msg.timestamp
     except serial.SerialException as e:
         print('Device error: {}'.format(e))
         break
     except pynmea2.ParseError as e:
         print('Parse error: {}'.format(e))
         continue
+    except Exception as e:
+        continue
     else:
-        if check_last_update(time=msg.timestamp,last_time=last_time)==True:
-            if last_time==00:
-                center = (msg.latitude, msg.longitude,)
-                m = Map(center=center, zoom=15)
-                marker = Marker(location=center, draggable=False)
-                m.add_layer(marker);
-                display(m)
-                last_time=msg.timestamp
-            else:
-                marker.location=(msg.latitude, msg.longitude)
-                last_time=msg.timestamp
+        if last_time==00:
+            center = (latitude, longitude)
+            m = Map(center=center, zoom=15)
+            marker = Marker(location=center, draggable=False)
+            m.add_layer(marker);
+            display(m)
+            last_time=time
+        else:
+            marker.location=(latitude, longitude)
+            last_time=time
